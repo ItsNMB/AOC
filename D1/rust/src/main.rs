@@ -6,29 +6,11 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-fn find_substring(haystack: &str, needle: &str) -> Option<usize> {
-    haystack.find(needle)
-    // if let Some(index) = haystack.find(needle) {
-    //     Some(index)
-    // } else {
-    //     None
-    // }
-}
-
-fn find_all_literals(line: &str) -> Vec<(usize, &str, usize)> {
-    debug!("searching for literals line: {}", line);
-    let literals = [
-        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-    ];
-    let mut result: Vec<(usize, &str, usize)> = Vec::new();
-    for (i, l) in literals.iter().enumerate() {
-        if let Some(index) = line.find(l) {
-            debug!("Substring [{}] found at index: {}", l, index);
-            result.push((index, l, i))
-        }
-    }
-    debug!("result: {:?}", result);
-    result
+fn find_all_occurrences(haystack: &str, needle: &str) -> Vec<usize> {
+    haystack
+        .match_indices(needle)
+        .map(|(index, _)| index)
+        .collect()
 }
 
 fn find_all_digits(line: &str) -> Vec<(usize, usize)> {
@@ -41,6 +23,29 @@ fn find_all_digits(line: &str) -> Vec<(usize, usize)> {
             result.push((i, c.to_string().parse::<usize>().unwrap()));
         }
     }
+    result.sort_by(|a, b| a.0.cmp(&b.0));
+    debug!("result: {:?}", result);
+    result
+}
+
+fn find_all_literals(line: &str) -> Vec<(usize, &str, usize)> {
+    debug!("searching for literals line: {}", line);
+    let literals = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    ];
+    let mut result: Vec<(usize, &str, usize)> = Vec::new();
+    for (i, l) in literals.iter().enumerate() {
+        let ocs = find_all_occurrences(line, l);
+        if ocs.is_empty() {
+            continue;
+        } else {
+            for oc in ocs {
+                debug!("Substring [{}] found at index: {}", l, oc);
+                result.push((oc, l, i));
+            }
+        }
+    }
+    result.sort_by(|a, b| a.0.cmp(&b.0));
     debug!("result: {:?}", result);
     result
 }
@@ -55,8 +60,8 @@ fn process(values: &mut str) -> u32 {
     for line in values.lines() {
         let chars: Vec<char> = line.chars().collect();
 
-        let digits = find_all_digits(line);
-        let literals = find_all_literals(line);
+        let mut digits = find_all_digits(line);
+        let mut literals = find_all_literals(line);
 
         let first = if !literals.is_empty() {
             if digits[0].0 < literals[0].0 {
