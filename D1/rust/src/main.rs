@@ -1,49 +1,70 @@
-use env_logger::{Builder, Target};
+#![allow(unused)]
+#![allow(dead_code)]
+
+use log::{debug, error, info, trace, warn};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-#[allow(unused_assignments)]
+fn find_substring(haystack: &str, needle: &str) -> Option<usize> {
+    haystack.find(needle)
+    // if let Some(index) = haystack.find(needle) {
+    //     Some(index)
+    // } else {
+    //     None
+    // }
+}
+
+fn find_all_literals(line: &str) -> Vec<(usize, &str)> {
+    debug!("searching for literals line: {}", line);
+    let literals = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    ];
+    let mut result: Vec<(usize, &str)> = Vec::new();
+    for (_, l) in literals.iter().enumerate() {
+        if let Some(index) = line.find(l) {
+            debug!("Substring [{}] found at index: {}", l, index);
+            result.push((index, l))
+        }
+    }
+    result
+}
+
+fn find_all_digits(line: &str) -> Vec<(usize, usize)> {
+    debug!("searching for digits in line: {}", line);
+    let mut result: Vec<(usize, usize)> = Vec::new();
+    let chars: Vec<char> = line.chars().collect();
+    for (i, c) in chars.iter().enumerate() {
+        if c.is_ascii_digit() {
+            debug!("Digit [{}] found at index: {}", c, i);
+            result.push((i, c.to_string().parse::<usize>().unwrap()));
+        }
+    }
+    result
+}
 
 fn process(values: &mut str) {
+    let literals = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    ];
+
     let mut sum = 0;
+
     for line in values.lines() {
         let chars: Vec<char> = line.chars().collect();
-        let mut first: i32 = -1;
-        let mut last: i32 = -1;
+        let mut first: usize = 0;
+        let mut last: usize = 0;
 
-        for (i, c) in chars.iter().enumerate() {
-            // if c is a digit, then set first to i
-            if c.is_ascii_digit() {
-                first = i as i32;
-                break;
-            }
-        }
+        let digits = find_all_digits(line);
+        let literals = find_all_literals(line);
 
-        for (i, c) in chars.iter().enumerate().rev() {
-            // if c is a digit, then set last to i
-            if c.is_ascii_digit() {
-                last = i as i32;
-                break;
-            }
-        }
-
-        if first == -1 || last == -1 {
-            log::error!("NO DIGIT FOUND!");
-        }
-
-        log::debug!("line: {}", line);
-        log::debug!("first: {}, last: {}", first, last);
-        let first_char = chars[first as usize];
-        let last_char = chars[last as usize];
+        let first_char = chars[first];
+        let last_char = chars[last];
         let joined = format!("{}{}", first_char, last_char);
-        // let first_value: i32 = chars[first as usize].to_digit(10).unwrap() as i32;
-        // let last_value: i32 = chars[last as usize].to_digit(10).unwrap() as i32;
-        // let mut first_value: i32 = chars[first].to_digit(10).unwrap();
-        // let mut last_value: i32 = chars[last].to_digit(10).unwrap();
-        log::debug!("{} + {}: {}", first_char, last_char, joined);
+
+        debug!("line: {}", line);
+        debug!("first: {}, last: {}", first, last);
+        debug!("{} + {}: {}", first_char, last_char, joined);
 
         sum += joined.parse::<i32>().unwrap();
     }
@@ -52,20 +73,20 @@ fn process(values: &mut str) {
 }
 
 fn main() {
-    // Builder::new().target(Target::Stdout).init();
     env_logger::init();
 
-    // Create a path to the desired file
+    debug!("Result: {:?}", find_all_literals("sixrrmlkptmc18zhvninek"));
+    debug!("Result: {:?}", find_all_digits("sixrrmlkptmc18zhvninek"));
+    return;
+
     let path = Path::new("../data/values.txt");
     let display = path.display();
 
-    // Open the path in read-only mode, returns `io::Result<File>`
     let mut file = match File::open(path) {
         Err(why) => panic!("couldn't open {}: {}", display, why),
         Ok(file) => file,
     };
 
-    // Read the file contents into a string, returns `io::Result<usize>`
     let mut s = String::new();
     match file.read_to_string(&mut s) {
         Err(why) => panic!("couldn't read {}: {}", display, why),
