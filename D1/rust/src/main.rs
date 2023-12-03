@@ -15,18 +15,19 @@ fn find_substring(haystack: &str, needle: &str) -> Option<usize> {
     // }
 }
 
-fn find_all_literals(line: &str) -> Vec<(usize, &str)> {
+fn find_all_literals(line: &str) -> Vec<(usize, &str, usize)> {
     debug!("searching for literals line: {}", line);
     let literals = [
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
     ];
-    let mut result: Vec<(usize, &str)> = Vec::new();
-    for (_, l) in literals.iter().enumerate() {
+    let mut result: Vec<(usize, &str, usize)> = Vec::new();
+    for (i, l) in literals.iter().enumerate() {
         if let Some(index) = line.find(l) {
             debug!("Substring [{}] found at index: {}", l, index);
-            result.push((index, l))
+            result.push((index, l, i))
         }
     }
+    debug!("result: {:?}", result);
     result
 }
 
@@ -40,44 +41,65 @@ fn find_all_digits(line: &str) -> Vec<(usize, usize)> {
             result.push((i, c.to_string().parse::<usize>().unwrap()));
         }
     }
+    debug!("result: {:?}", result);
     result
 }
 
-fn process(values: &mut str) {
+fn process(values: &mut str) -> u32 {
     let literals = [
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
     ];
 
-    let mut sum = 0;
+    let mut sum: u32 = 0;
 
     for line in values.lines() {
         let chars: Vec<char> = line.chars().collect();
-        let mut first: usize = 0;
-        let mut last: usize = 0;
 
         let digits = find_all_digits(line);
         let literals = find_all_literals(line);
 
-        let first_char = chars[first];
-        let last_char = chars[last];
-        let joined = format!("{}{}", first_char, last_char);
+        let first = if !literals.is_empty() {
+            if digits[0].0 < literals[0].0 {
+                digits[0].1
+            } else {
+                literals[0].2
+            }
+        } else {
+            digits[0].1
+        };
+
+        let last = if !literals.is_empty() {
+            if digits.last().unwrap().0 > literals.last().unwrap().0 {
+                digits.last().unwrap().1
+            } else {
+                literals.last().unwrap().2
+            }
+        } else {
+            digits.last().unwrap().1
+        };
+
+        let joined = format!("{}{}", first, last);
 
         debug!("line: {}", line);
         debug!("first: {}, last: {}", first, last);
-        debug!("{} + {}: {}", first_char, last_char, joined);
+        debug!("{} + {}: {}", first, last, joined);
+        debug!("-----------------------------------------------------------------------------------------------");
 
-        sum += joined.parse::<i32>().unwrap();
+        sum += match joined.parse::<u32>() {
+            Err(why) => panic!("couldn't parse {}: {}", joined, why),
+            Ok(parsed) => parsed,
+        };
     }
 
-    println!("sum: {}", sum);
+    sum
 }
 
 fn main() {
     env_logger::init();
 
-    debug!("Result: {:?}", find_all_literals("sixrrmlkptmc18zhvninek"));
-    debug!("Result: {:?}", find_all_digits("sixrrmlkptmc18zhvninek"));
-    return;
+    // debug!("Result: {:?}", find_all_literals("sixrrmlkptmc18zhvninek"));
+    // debug!("Result: {:?}", find_all_digits("sixrrmlkptmc18zhvninek"));
+    // return;
 
     let path = Path::new("../data/values.txt");
     let display = path.display();
@@ -88,8 +110,10 @@ fn main() {
     };
 
     let mut s = String::new();
-    match file.read_to_string(&mut s) {
+    let sum = match file.read_to_string(&mut s) {
         Err(why) => panic!("couldn't read {}: {}", display, why),
         Ok(_) => process(&mut s),
-    }
+    };
+
+    print!("sum = {}", sum);
 }
